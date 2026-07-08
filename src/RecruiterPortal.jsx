@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { LayoutGrid, Briefcase, ListChecks, Users, UserCircle, LogOut, Search, MapPin, Clock, DollarSign, X, Plus, Flame, Lock, Paperclip, FileText } from 'lucide-react';
 
 // ---- Easy to customize ----
@@ -107,7 +108,7 @@ function LoginScreen({ onLogin }) {
   );
 }
 
-function Sidebar({ page, setPage, role, onLogout }) {
+function Sidebar({ page, navigate, role, onLogout }) {
   const items = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutGrid, locked: false },
     { id: 'jobs', label: 'Browse jobs', icon: Briefcase, locked: false },
@@ -131,7 +132,7 @@ function Sidebar({ page, setPage, role, onLogout }) {
         {items.map(({ id, label, icon: Icon, locked }) => (
           <button
             key={id}
-            onClick={() => setPage(id)}
+            onClick={() => navigate(`/recruiter/${id}`)}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-sm transition-colors"
             style={page === id ? { backgroundColor: BRAND.accent, color: 'white', fontWeight: 500 } : {}}
             onMouseEnter={e => { if (page !== id) e.currentTarget.style.backgroundColor = '#1e293b'; }}
@@ -191,9 +192,11 @@ function JobCard({ job, onAdd, onView, added }) {
 }
 
 export default function RecruiterPortal() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const page = (location.pathname.split('/recruiter/')[1] || 'dashboard').split('/')[0];
   const [user, setUser] = useState(null);
   const [authChecked, setAuthChecked] = useState(false);
-  const [page, setPage] = useState('dashboard');
   const [jobs, setJobs] = useState(SEED_JOBS);
   const [worklist, setWorklist] = useState([]);
   const [candidates, setCandidates] = useState([]);
@@ -236,6 +239,13 @@ export default function RecruiterPortal() {
     })();
   }, [user]);
 
+  // Keep the URL meaningful — default to /recruiter/dashboard
+  useEffect(() => {
+    if (user && !location.pathname.startsWith('/recruiter/')) {
+      navigate('/recruiter/dashboard', { replace: true });
+    }
+  }, [user, location.pathname]);
+
   const persist = useCallback(async (key, value, shared) => {
     try { await storage.set(key, JSON.stringify(value)); } catch (e) {}
   }, []);
@@ -249,7 +259,7 @@ export default function RecruiterPortal() {
     try { await storage.delete('currentUser'); } catch (e) {}
     setUser(null);
     setLoaded(false);
-    setPage('dashboard');
+    navigate('/recruiter/dashboard');
   };
 
   const addToWorklist = (job) => {
@@ -332,7 +342,7 @@ export default function RecruiterPortal() {
 
   return (
     <div className="flex min-h-screen bg-slate-50 font-sans" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
-      <Sidebar page={page} setPage={setPage} role={user.role} onLogout={handleLogout} />
+      <Sidebar page={page} navigate={navigate} role={user.role} onLogout={handleLogout} />
       <div className="flex-1 p-8 max-w-5xl">
         {!loaded ? (
           <div className="text-slate-400 text-sm">Loading...</div>
